@@ -1,1 +1,31 @@
-jd
+from flask import Flask, request, redirect, render_template, session
+import sqlite3
+import hashlib
+
+app = Flask(__name__)
+app.secret_key = "your_secret_key"
+
+def get_user(email, password):
+    con = sqlite3.connect("users.db")
+    cur = con.cursor()
+    cur.execute("SELECT * FROM users WHERE email=? AND password=?", (email, hashlib.sha256(password.encode()).hexdigest()))
+    return cur.fetchone()
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+        user = get_user(email, password)
+        if user:
+            session["user"] = email
+            return redirect("/dashboard")
+        else:
+            return "Login failed"
+    return render_template("login.html")
+
+@app.route("/dashboard")
+def dashboard():
+    if "user" in session:
+        return f"Welcome {session['user']}!"
+    return redirect("/login")
